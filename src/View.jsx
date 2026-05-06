@@ -1,49 +1,11 @@
 import React, { useState, useEffect } from "react";
-import {Container,Row,Col,Card,Button,Image,Form,ListGroup,Alert,} from "react-bootstrap";
+import {Container, Row, Col, Card, Button,Image, Form, ListGroup, Alert} from "react-bootstrap";
 import axios from "axios";
 import { useParams } from "react-router";
 
-function StarIcon({ filled = false, size = 24, ...props }) {
-  const style = {width: size,height: size,cursor: props.onClick ? "pointer" : "default",color: filled ? "#f6b319" : "#cfcfcf",};
-
-  return (
-    <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={style} {...props}>
-      <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />
-    </svg>
-  );
-}
-
-function StarRatingInput({ rating, setRating }) {
-  return (
-    <div className="mb-2">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <span key={n} onClick={() => setRating(n)}>
-          <StarIcon filled={n <= rating} size={26} />
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function ReviewCard({ review }) {
-  return (
-    <ListGroup.Item>
-
-      <strong>{review.user_id?.name || "Anonymous"}</strong>
-
-      <div>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <StarIcon key={n} size={14} filled={n <= review.rating} />
-        ))}
-      </div>
-
-      <div>{review.message}</div>
-    </ListGroup.Item>
-  );
-}
-
 function View() {
   const { id } = useParams();
+
   const [item, setItem] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [myReview, setMyReview] = useState(null);
@@ -52,13 +14,30 @@ function View() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const API = "http://localhost:3000/api";
+
   useEffect(() => {
+    if (!id) return;
+
     (async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/viewitem/${id}`);
-        if (res.data.success) setItem(res.data.data);
-      } catch {
-        setError("Failed to load product");
+        const res = await axios.get(`${API}/viewitem/${id}`);
+
+        if (res.data?.success && res.data.data) {
+          setItem(res.data.data);
+        } else {
+          setError("Product not found");
+        }
+      } catch (err) {
+        console.error("PRODUCT FETCH ERROR:", err.response || err);
+
+        if (err.response?.status === 500) {
+          setError("Server error (500). Check backend.");
+        } else if (err.response?.status === 404) {
+          setError("Product not found");
+        } else {
+          setError(err.response?.data?.message || "Failed to load product");
+        }
       } finally {
         setLoading(false);
       }
@@ -66,26 +45,40 @@ function View() {
   }, [id]);
 
   useEffect(() => {
+    if (!id) return;
+
     (async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/productreview/${id}`);
-        if (res.data.success) setReviews(res.data.data);
+        const res = await axios.get(`${API}/productreview/${id}`);
+        if (res.data?.success) {
+          setReviews(res.data.data || []);
+        }
       } catch (err) {
-        console.error(err);
+        console.error("REVIEW FETCH ERROR:", err.response || err);
       }
     })();
   }, [id]);
 
   useEffect(() => {
-    (async () => {
-      const token = localStorage.getItem("userToken");
-      if (!token) return;
+    const token = localStorage.getItem("userToken");
+    if (!token || !id) return;
 
+    (async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/myproductreview/${id}`,{headers: { Authorization: `Bearer ${token}` },});
-        if (res.data.success) setMyReview(res.data.data);
+        const res = await axios.get(
+          `${API}/myproductreview/${id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (res.data?.success) {
+          setMyReview(res.data.data);
+        }
       } catch (err) {
-        if (err.response?.status !== 404) console.error(err);
+        if (err.response?.status !== 404) {
+          console.error("MY REVIEW ERROR:", err.response || err);
+        }
       }
     })();
   }, [id]);
@@ -95,63 +88,90 @@ function View() {
 
     const token = localStorage.getItem("userToken");
     if (!token) {
-      alert("Please login to submit a review");
+      alert("Login required");
       return;
     }
 
     try {
-      const res = await axios.post("http://localhost:3000/api/customerreview",{ product_id: id, rating, message },{ headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.post( `${API}/customerreview`, { product_id: id, rating, message,}, {headers: { Authorization: `Bearer ${token}` },} );
 
-      if (res.data.success) {
+      if (res.data?.success) {
         setMyReview(res.data.data);
         setReviews((prev) => [res.data.data, ...prev]);
         setMessage("");
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Review submit failed");
+      console.error("SUBMIT REVIEW ERROR:", err.response || err);
+
+      if (err.response?.status === 500) {
+        alert("Server error (500)");
+      } else {
+        alert(err.response?.data?.message || "Submit failed");
+      }
     }
   };
 
   if (loading) return <p className="text-center">Loading...</p>;
-  if (error) return <p className="text-center text-danger">{error}</p>;
+
+  if (error)
+    return <p className="text-center text-danger">{error}</p>;
+
+  if (!item)
+    return <p className="text-center">No product found</p>;
 
   return (
     <Container className="my-4">
       <Row>
         <Col md={12} className="text-center">
-          <h1>{item?.name}</h1>
+          <h1>{item.name}</h1>
         </Col>
 
         <Col md={12} className="text-center mb-4">
-          <Image src={item?.image} fluid rounded />
+          <Image src={item.image || ""} fluid rounded />
         </Col>
 
         <Col md={12}>
-          <Card className="shadow-sm">
+          <Card>
             <Card.Body>
               <h4>Customer Reviews</h4>
 
               {myReview ? (
                 <Alert variant="success">
                   <strong>You already reviewed this product</strong>
-                  <div className="mt-2">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <StarIcon key={n} size={16} filled={n <= myReview.rating}/>
-                    ))}
-                    <p className="mt-1">{myReview.message}</p>
-                  </div>
+                  <p className="mt-2">{myReview.message}</p>
                 </Alert>
               ) : (
                 <Form>
-                  <StarRatingInput rating={rating} setRating={setRating} />
-                  <Form.Control as="textarea" rows={3} className="mb-2" placeholder="Write your review" value={message} onChange={(e) => setMessage(e.target.value)}/>
-                  <Button onClick={handleSubmit}>Submit Review</Button>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Rating</Form.Label>
+                    <Form.Select value={rating}  onChange={(e) => setRating(Number(e.target.value))} >
+                      {[1, 2, 3, 4, 5].map((r) => (
+                        <option key={r} value={r}>
+                          {r} Star
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+
+                  <Form.Control  as="textarea"  rows={3} className="mb-2" placeholder="Write your review" value={message}onChange={(e) => setMessage(e.target.value)}  />
+
+                  <Button onClick={handleSubmit}> Submit Review </Button>
                 </Form>
               )}
 
               <ListGroup className="mt-3">
+                {reviews.length === 0 && (
+                  <ListGroup.Item>No reviews yet</ListGroup.Item>
+                )}
+
                 {reviews.map((r) => (
-                  <ReviewCard key={r._id} review={r} />
+                  <ListGroup.Item key={r._id}>
+                    <strong>
+                      {r.user_id?.name || "Anonymous"}
+                    </strong>
+                    <div>Rating: {r.rating || "N/A"}</div>
+                    <div>{r.message}</div>
+                  </ListGroup.Item>
                 ))}
               </ListGroup>
             </Card.Body>

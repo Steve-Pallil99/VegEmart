@@ -1,138 +1,102 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Table from "react-bootstrap/Table";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
-import Modal from "react-bootstrap/Modal";
+import axios from "axios";
 
-function Userreview() {
-  const loggedInUser = { email: localStorage.getItem("userEmail") };
-  const [reviews, setReviews] = useState([{ id: 1, name: "Steve", email: "steve@example.com", review: "Great product!" },{ id: 2, name: "Jacob", email: "jacob@example.com", review: "Nice quality." },]);
-  const [newEmail, setNewEmail] = useState(loggedInUser.email || "");
-  const [newReview, setNewReview] = useState("");
-  const [show, setShow] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editReview, setEditReview] = useState("");
+function Userreview({ productId }) {
+  const token = localStorage.getItem("token");
 
-  const handleAddReview = () => {
-    if (!loggedInUser.email) {
-      return alert("Please login first");
+  const [review, setReview] = useState(null);
+  const [message, setMessage] = useState("");
+  const [rating, setRating] = useState(1);
+
+  useEffect(() => {
+    if (productId) {
+      fetchMyReview();
     }
+  }, [productId]);
 
-    if (!newReview) {
-      return alert("Please enter review");
+  const fetchMyReview = async () => {
+    try {
+      const res = await axios.get( `http://localhost:3000/api/myproductreview/${productId}`,{headers: { Authorization: `Bearer ${token}`,},});
+
+      if (res.data?.data) {
+        setReview(res.data.data);
+        setMessage(res.data.data.message);
+        setRating(res.data.data.rating);
+      } else {
+        setReview(null);
+        setMessage("");
+        setRating(1);
+      }
+    } catch (err) {
+      setReview(null);
     }
-
-    const newItem = {id: reviews.length + 1,name: loggedInUser.email.split("@")[0],email: loggedInUser.email,review: newReview,};
-
-    setReviews([...reviews, newItem]);
-    setNewReview("");
   };
 
-  const handleEdit = (item) => {
-    setEditingItem(item);
-    setEditName(item.name);
-    setEditEmail(item.email);
-    setEditReview(item.review);
-    setShow(true);
-  };
+  const handleSubmit = async () => {
+    if (!token) return alert("Please login first");
+    if (!message.trim()) return alert("Enter review");
 
-  const handleSaveChanges = () => {
-    if (editEmail !== loggedInUser.email) {
-      return alert("You can only edit your own review");
+    try {
+      await axios.post(`http://localhost:3000/api/myproductreview/${productId}`,{ rating: Number(rating), message: message, }, {headers: { Authorization: `Bearer ${token}`,},}
+      );
+
+      alert(review ? "Review updated!" : "Review added!");
+      fetchMyReview();
+    } catch (err) {
+      alert(err.response?.data?.message || "Error");
     }
-
-    const updated = reviews.map((r) => r.id === editingItem.id ? { ...r, name: editName, review: editReview } : r);
-    setReviews(updated);
-    setShow(false);
   };
-
-  const userReviews = reviews.filter( (item) => item.email === loggedInUser.email);
 
   return (
     <div className="p-4">
-      <h2 className="mb-3">User Reviews</h2>
-      {!loggedInUser.email && (
-        <p className="text-danger">Please login to see your reviews</p>
-      )}
+      <h2>User Review</h2>
 
       <Table striped bordered hover>
         <thead>
           <tr>
             <th>#</th>
-            <th>Name</th>
-            <th>Email</th>
+            <th>Rating</th>
             <th>Review</th>
-            <th>Actions</th>
           </tr>
         </thead>
 
         <tbody>
-          {userReviews.map((item) => (
-            <tr key={item.id}>
-              <td>{item.id}</td>
-              <td>{item.name}</td>
-              <td>{item.email}</td>
-              <td>{item.review}</td>
-              <td>
-                <Button variant="warning" size="sm" onClick={() => handleEdit(item)}  > Edit</Button>
-              </td>
-            </tr>
-          ))}
-
-          {userReviews.length === 0 && (
+          {review ? (
             <tr>
-              <td colSpan="5" className="text-center"> No reviews found</td>
+              <td>1</td>
+              <td>{review.rating}</td>
+              <td>{review.message}</td>
+            </tr>
+          ) : (
+            <tr>
+              <td colSpan="3" className="text-center">
+                No review found
+              </td>
             </tr>
           )}
         </tbody>
       </Table>
 
-      <h4 className="mt-4">Add New Review</h4>
-      <Form className="mt-3">
+      <h4 className="mt-4">
+        {review ? "Update Your Review" : "Add Review"}
+      </h4>
+
+      <Form>
         <Form.Group className="mb-3">
-          <Form.Label>Email</Form.Label>
-          <Form.Control type="email" value={loggedInUser.email || ""} disabled />
+          <Form.Label>Rating</Form.Label>
+          <Form.Select value={rating} onChange={(e) => setRating(Number(e.target.value))} >{[1, 2, 3, 4, 5].map((num) => ( <option key={num} value={num}> {num} </option> ))}</Form.Select>
         </Form.Group>
 
         <Form.Group className="mb-3">
           <Form.Label>Review</Form.Label>
-          <Form.Control as="textarea" rows={3} value={newReview} onChange={(e) => setNewReview(e.target.value)}/>
+          <Form.Control as="textarea" rows={3} value={message} onChange={(e) => setMessage(e.target.value)} />
         </Form.Group>
 
-        <Button variant="primary" onClick={handleAddReview}>Add Review</Button>
+        <Button onClick={handleSubmit}> {review ? "Update Review" : "Submit Review"}</Button>
       </Form>
-
-      <Modal show={show} onHide={() => setShow(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Edit Review</Modal.Title>
-        </Modal.Header>
-
-        <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3">
-              <Form.Label>Name</Form.Label>
-              <Form.Control value={editName} onChange={(e) => setEditName(e.target.value)} />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Email</Form.Label>
-              <Form.Control value={editEmail} disabled />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Review</Form.Label>
-              <Form.Control as="textarea"  rows={3} value={editReview} onChange={(e) => setEditReview(e.target.value)}/>
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShow(false)}> Close</Button>
-          <Button variant="primary" onClick={handleSaveChanges}>Save Changes</Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   );
 }

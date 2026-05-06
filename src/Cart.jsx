@@ -1,168 +1,167 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Container, Row, Col, Card, Button, Table, Modal } from "react-bootstrap";
+import { Container, Table, Button } from "react-bootstrap";
+import { useNavigate } from "react-router";
 
 const api = axios.create({
   baseURL: "http://localhost:3000/api",
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("adminToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  const token = localStorage.getItem("userToken");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
 function Cart() {
   const [cartItems, setCartItems] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [placingOrder, setPlacingOrder] = useState(false);
-  const [orderMessage, setOrderMessage] = useState("");
+  const [total, setTotal] = useState(0);
+  const navigate = useNavigate();
 
   const fetchCart = async () => {
     try {
       const res = await api.get("/viewcart");
-      setCartItems(res.data.data || []);
-    } catch (error) {
-      console.error("View cart error:", error);
+      const items = res.data.data || [];
+
+      setCartItems(items);
+
+      const sum = items.reduce((acc, item) => acc + item.subtotal, 0);
+      setTotal(sum);
+    } catch (err) {
+      console.error("fetchCart error:", err.response?.data || err.message);
     }
   };
 
   useEffect(() => {
     fetchCart();
+
+    const update = () => fetchCart();
+    window.addEventListener("cartUpdated", update);
+
+    return () => window.removeEventListener("cartUpdated", update);
   }, []);
 
-  const addToCart = async (vegid) => {
+  const increaseQty = async (productId) => {
     try {
-      await api.post("/addtocart", {vegid,quantity: 1,});
-      fetchCart();
-    } catch (error) {
-      console.error("Add to cart error:", error);
+      await api.post("/addtocart", {
+        vegid: productId,
+        quantity: 1,
+      });
+      window.dispatchEvent(new Event("cartUpdated"));
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const removeFromCart = async (vegid) => {
+  const decreaseQty = async (productId) => {
     try {
-      await api.post("/addtocart", {vegid,quantity: -1,});
-      fetchCart();
-    } catch (error) {
-      console.error("Remove from cart error:", error);
+      await api.post("/addtocart", {
+        vegid: productId,
+        quantity: -1,
+      });
+      window.dispatchEvent(new Event("cartUpdated"));
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const createOrder = async () => {
+  const removeItem = async (productId, currentQty) => {
     try {
-      setPlacingOrder(true);
-      const res = await api.post("/createorder");
-
-      if (res.data.success) {
-        setOrderMessage("Order placed successfully!");
-        fetchCart();
-
-        setTimeout(() => {
-          setShowModal(false);
-          setOrderMessage("");
-        }, 1500);
-      }
-    } catch (error) {
-      console.error("Create order error:", error);
-      setOrderMessage("Failed to place order");
-    } finally {
-      setPlacingOrder(false);
+      await api.post("/addtocart", {
+        vegid: productId,
+        quantity: -currentQty,
+      });
+      window.dispatchEvent(new Event("cartUpdated"));
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.vegid.price * item.quantity,
-    0
-  );
-
-  const discountRate = 0.1;
-  const deliveryFee = 20;
-  const discountAmount = subtotal * discountRate;
-  const total = subtotal - discountAmount + deliveryFee;
+  const handleCheckout = async () => {
+    try {
+      const res = await api.post("/placeorder");
+      navigate("/invoice", { state: res.data });
+    } catch (err) {
+      console.error("Checkout failed:", err.response?.data || err.message);
+    }
+  };
 
   return (
-    <>
-      <Container className="my-4">
-        <Row>
-          <Col md={8}>
-            <Table responsive bordered hover>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Product</th>
-                  <th>Price (₹)</th>
-                  <th>Quantity</th>
-                  <th>Add / Remove</th>
-                </tr>
-              </thead>
+    <Container className="my-4">
+      <Table bordered hover>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Product</th>
+            <th>Price</th>
+            <th>Qty</th>
+            <th>Subtotal</th>
+            <th>Action</th>
+          </tr>
+        </thead>
 
-              <tbody>
-                {cartItems.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="text-center">Cart is empty</td>
-                  </tr>
-                ) : (
-                  cartItems.map((item, index) => (
-                    <tr key={item.vegid._id}>
-                      <td>{index + 1}</td>
-                      <td>{item.vegid.name}</td>
-                      <td>₹{item.vegid.price}</td>
-                      <td>{item.quantity}</td>
-                      <td>
-                        <Button variant="danger" size="sm" className="me-2" disabled={item.quantity <= 1} onClick={() => removeFromCart(item.vegid._id)}> -</Button>
-                        <Button  variant="success"  size="sm" onClick={() => addToCart(item.vegid._id)} > + </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
-          </Col>
+        <tbody>
+          {cartItems.length === 0 ? (
+            <tr>
+              <td colSpan="6" align="center">
+                Cart empty
+              </td>
+            </tr>
+          ) : (
+            cartItems.map((item, i) => (
+              <tr key={item._id}>
+                <td>{i + 1}</td>
+                <td>{item.name}</td>
+                <td>₹{item.price}</td>
 
-          <Col md={4}>
-            <Card>
-              <Card.Body>
-                <Card.Title>Order Summary</Card.Title>
-                <hr />
-                <p>Original MRP: ₹{subtotal}</p>
-                <p>Discount: -₹{discountAmount.toFixed(2)}</p>
-                <p>Delivery Fee: ₹{deliveryFee}</p>
-                <hr />
-                <h5>Total: ₹{total.toFixed(2)}</h5>
+                <td>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => decreaseQty(item.productId)}
+                  >
+                    −
+                  </Button>
 
-                <Button variant="primary"  className="w-100 mt-3" disabled={cartItems.length === 0}  onClick={() => setShowModal(true)}>Pay Now</Button>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      </Container>
+                  <span className="mx-2">{item.quantity}</span>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Confirm Order</Modal.Title>
-        </Modal.Header>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => increaseQty(item.productId)}
+                  >
+                    +
+                  </Button>
+                </td>
 
-        <Modal.Body>
-          <p>Are you sure you want to place this order?</p>
-          <hr />
-          <p>
-            <strong>Total Amount:</strong> ₹{total.toFixed(2)}
-          </p>
+                <td>₹{item.subtotal}</td>
 
-          {orderMessage && (
-            <p className="text-center mt-2">{orderMessage}</p>
+                <td>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() =>
+                      removeItem(item.productId, item.quantity)
+                    }
+                  >
+                    Remove
+                  </Button>
+                </td>
+              </tr>
+            ))
           )}
-        </Modal.Body>
+        </tbody>
+      </Table>
 
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)} disabled={placingOrder}>Cancel</Button>
-          <Button variant="success" onClick={createOrder}  disabled={placingOrder}>{placingOrder ? "Placing Order..." : "Confirm Order"}</Button>
-        </Modal.Footer>
-      </Modal>
-    </>
+      {cartItems.length > 0 && (
+        <>
+          <h5>Total: ₹{total}</h5>
+          <Button onClick={handleCheckout}>
+            Checkout / Print Invoice
+          </Button>
+        </>
+      )}
+    </Container>
   );
 }
 

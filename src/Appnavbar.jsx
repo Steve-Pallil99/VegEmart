@@ -40,7 +40,7 @@ function Appnavbar() {
               <>
                 <Nav.Link as={Link} to="/Admindashboard">Dashboard</Nav.Link>
                 <Nav.Link as={Link} to="/Usermanage">UserManage</Nav.Link>
-                 <Nav.Link as={Link} to="/Complaints">Complaint</Nav.Link>
+                 {/* <Nav.Link as={Link} to="/Complaints">Complaint</Nav.Link> */}
                 <Nav.Link as={Link} to="/Productmanage">ProductManage</Nav.Link>
                 <Nav.Link as={Link} to="/Ordermanage">OrderManage</Nav.Link>
                 <Nav.Link onClick={handleLogout}>Logout</Nav.Link>
@@ -50,7 +50,7 @@ function Appnavbar() {
               <>
                 <Nav.Link as={Link} to="/CartProduce">Cart</Nav.Link>
                 <Nav.Link as={Link} to="/Userreview">Review</Nav.Link>
-                <Nav.Link as={Link} to="/Invoiceview">Invoice</Nav.Link>
+                {/* <Nav.Link as={Link} to="/Invoiceview">Invoice</Nav.Link> */}
                 <Nav.Link as={Link} to="/Cart">Bill</Nav.Link>
                 <Nav.Link onClick={handleLogout}>Logout</Nav.Link>
               </>

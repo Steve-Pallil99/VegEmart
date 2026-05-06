@@ -19,7 +19,6 @@ import Admindashboard from './Admindashboard';
 import Admindetails from './Admindetails';
 import Invoiceview from './Invoiceview';
 import Usermanage from './Usermanage';
-import Complaints from './Complaints';
 import Userregister from './Userregister';
 import Userlogin from './Userlogin';
 import Userreview from './Userreview';
@@ -55,7 +54,6 @@ function App() {
                <Route path="/Userreview" element={<Userreview></Userreview>} />
                <Route path="/Userfield" element={<Userfield></Userfield>} />
                <Route path="/reset-password/:id" element={<Resetpass></Resetpass>} />
-                <Route path="/Complaints" element={<Complaints></Complaints>} />
                <Route path="/Adminorder" element={<Adminorder></Adminorder>} />
                <Route path="/Admindetails" element={<Admindetails></Admindetails>} />
              <Route path="/Admindashboard" element={<Admindashboard></Admindashboard>} />

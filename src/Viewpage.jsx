@@ -1,74 +1,74 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
 import Table from "react-bootstrap/Table";
 
 function Viewpage() {
+  const [orders, setOrders] = useState([]);
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:3000/api/orders/${user._id}`
+        );
+        setOrders(res.data.data || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    if (user?._id) fetchOrders();
+  }, [user]);
+
+  const subtotal = orders.reduce((sum, o) => {
+    return sum + (o.itemid?.price || 0) * o.itemcount;
+  }, 0);
+
+  const tax = subtotal * 0.05;
+  const total = subtotal + tax;
+
   return (
-    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
-      <h1 style={{ textAlign: "center", marginBottom: "30px" }}>VegEmart</h1>
+    <div style={{ padding: 20, maxWidth: 800, margin: "auto" }}>
+      <h2 align="center">Invoice</h2>
 
-      <h4>Billing To:</h4>
-      <p>
-        Bob<br />
-        Street Avenue 10019<br />
-        Miami, FL
-      </p>
-
-      <Table striped bordered hover>
+      <Table bordered hover>
         <thead>
           <tr>
             <th>Product</th>
-            <th>Price ($)</th>
+            <th>Price</th>
             <th>Qty</th>
-            <th>Total ($)</th>
+            <th>Total</th>
           </tr>
         </thead>
 
         <tbody>
-          <tr>
-            <td>Tomatoes</td>
-            <td>0.00</td>
-            <td>0</td>
-            <td>0.00</td>
-          </tr>
-          <tr>
-            <td>Potatoes</td>
-            <td>0.00</td>
-            <td>0</td>
-            <td>0.00</td>
-          </tr>
-          <tr>
-            <td>Onions</td>
-            <td>0.00</td>
-            <td>0</td>
-            <td>0.00</td>
-          </tr>
-          <tr>
-            <td>Bananas</td>
-            <td>0.00</td>
-            <td>0</td>
-            <td>0.00</td>
-          </tr>
-          <tr>
-            <td>Apples</td>
-            <td>0.00</td>
-            <td>0</td>
-            <td>0.00</td>
-          </tr>
+          {orders.length === 0 ? (
+            <tr>
+              <td colSpan="4" align="center">No orders</td>
+            </tr>
+          ) : (
+            orders.map((o, i) => {
+              const totalItem =
+                (o.itemid?.price || 0) * o.itemcount;
+
+              return (
+                <tr key={i}>
+                  <td>{o.itemid?.name}</td>
+                  <td>{o.itemid?.price}</td>
+                  <td>{o.itemcount}</td>
+                  <td>{totalItem}</td>
+                </tr>
+              );
+            })
+          )}
         </tbody>
       </Table>
 
-      <div style={{ textAlign: "right", marginTop: "20px" }}>
-        <p>Subtotal: $0.00</p>
-        <p>Tax: 0.00%</p>
-        <h5>Total: $0.00</h5>
-      </div>
-
-      <div style={{ marginTop: "40px" }}>
-        <h5>Terms & Conditions:</h5>
-        <p style={{ fontSize: "14px" }}>
-          All vegetable and fruit prices are subject to daily market changes. 
-          Payments must be made within 7 working days from the date of invoice. 
-          Goods once sold cannot be returned unless damaged at delivery time.
-        </p>
+      <div style={{ textAlign: "right" }}>
+        <p>Subtotal: Rs{subtotal.toFixed(2)}</p>
+        <p>Tax: Rs{tax.toFixed(2)}</p>
+        <h5>Total: Rs{total.toFixed(2)}</h5>
       </div>
     </div>
   );
