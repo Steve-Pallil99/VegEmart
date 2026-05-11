@@ -7,7 +7,6 @@ import HomeBrowse from './HomeBrowse';
 import View from './View';
 import Cart from './Cart';
 import CartProduce from './CartProduce';
-import Aboutpage from './Aboutpage';
 import Contactpage from './Contactpage';
 import Adminpage from './Adminpage';
 import Adminorder from './Adminorder';
@@ -17,7 +16,6 @@ import Viewpage from './Viewpage';
 import Userdashboard from './Userdashboard';
 import Admindashboard from './Admindashboard';
 import Admindetails from './Admindetails';
-import Invoiceview from './Invoiceview';
 import Usermanage from './Usermanage';
 import Userregister from './Userregister';
 import Userlogin from './Userlogin';
@@ -40,14 +38,12 @@ function App() {
         <Route path="/View/:id" element={<View></View>} />
         <Route path="/Cart" element={<Cart></Cart>} />
         <Route path="/CartProduce" element={<CartProduce></CartProduce>} />
-        <Route path="/Aboutpage" element={<Aboutpage></Aboutpage>} />
         <Route path="/Contactpage" element={<Contactpage></Contactpage>} />
          <Route path="/Adminpage" element={<Adminpage></Adminpage>} />
           <Route path="/Productmanage" element={<Productmanage></Productmanage>} />
           <Route path="/Ordermanage" element={<Ordermanage></Ordermanage>} />
            <Route path="/Viewpage" element={<Viewpage></Viewpage>} />
             <Route path="/Userdashboard" element={<Userdashboard></Userdashboard>} />
-             <Route path="/Invoiceview" element={<Invoiceview></Invoiceview>} />
               <Route path="/Usermanage" element={<Usermanage></Usermanage>} />
                <Route path="/Userregister" element={<Userregister></Userregister>} />
                 <Route path="/Userlogin" element={<Userlogin></Userlogin>} />

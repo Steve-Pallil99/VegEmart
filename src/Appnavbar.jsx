@@ -34,8 +34,7 @@ function Appnavbar() {
         <Navbar.Toggle />
         <Navbar.Collapse>
           <Nav className="ms-auto">
-            <Nav.Link as={Link} to="/HomeBrowse">Home</Nav.Link>
-            <Nav.Link as={Link} to="/Aboutpage">About</Nav.Link>
+            <Nav.Link as={Link} to="/">Home</Nav.Link>
             {role === "admin" && (
               <>
                 <Nav.Link as={Link} to="/Admindashboard">Dashboard</Nav.Link>

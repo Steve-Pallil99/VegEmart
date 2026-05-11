@@ -9,26 +9,39 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("userToken");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   return config;
 });
 
 function Cart() {
   const [cartItems, setCartItems] = useState([]);
   const [total, setTotal] = useState(0);
+
   const navigate = useNavigate();
 
   const fetchCart = async () => {
     try {
       const res = await api.get("/viewcart");
+
       const items = res.data.data || [];
 
       setCartItems(items);
 
-      const sum = items.reduce((acc, item) => acc + item.subtotal, 0);
+      const sum = items.reduce(
+        (acc, item) => acc + item.subtotal,
+        0
+      );
+
       setTotal(sum);
     } catch (err) {
-      console.error("fetchCart error:", err.response?.data || err.message);
+      console.error(
+        "fetchCart error:",
+        err.response?.data || err.message
+      );
     }
   };
 
@@ -36,9 +49,11 @@ function Cart() {
     fetchCart();
 
     const update = () => fetchCart();
+
     window.addEventListener("cartUpdated", update);
 
-    return () => window.removeEventListener("cartUpdated", update);
+    return () =>
+      window.removeEventListener("cartUpdated", update);
   }, []);
 
   const increaseQty = async (productId) => {
@@ -47,6 +62,7 @@ function Cart() {
         vegid: productId,
         quantity: 1,
       });
+
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (err) {
       console.error(err);
@@ -59,6 +75,7 @@ function Cart() {
         vegid: productId,
         quantity: -1,
       });
+
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (err) {
       console.error(err);
@@ -71,19 +88,20 @@ function Cart() {
         vegid: productId,
         quantity: -currentQty,
       });
+
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleCheckout = async () => {
-    try {
-      const res = await api.post("/placeorder");
-      navigate("/invoice", { state: res.data });
-    } catch (err) {
-      console.error("Checkout failed:", err.response?.data || err.message);
-    }
+  // UPDATED CHECKOUT
+  const handleCheckout = () => {
+    navigate("/Viewpage", {
+      state: {
+        orders: cartItems,
+      },
+    });
   };
 
   return (
@@ -111,24 +129,32 @@ function Cart() {
             cartItems.map((item, i) => (
               <tr key={item._id}>
                 <td>{i + 1}</td>
+
                 <td>{item.name}</td>
+
                 <td>₹{item.price}</td>
 
                 <td>
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => decreaseQty(item.productId)}
+                    onClick={() =>
+                      decreaseQty(item.productId)
+                    }
                   >
                     −
                   </Button>
 
-                  <span className="mx-2">{item.quantity}</span>
+                  <span className="mx-2">
+                    {item.quantity}
+                  </span>
 
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => increaseQty(item.productId)}
+                    onClick={() =>
+                      increaseQty(item.productId)
+                    }
                   >
                     +
                   </Button>
@@ -141,7 +167,10 @@ function Cart() {
                     size="sm"
                     variant="danger"
                     onClick={() =>
-                      removeItem(item.productId, item.quantity)
+                      removeItem(
+                        item.productId,
+                        item.quantity
+                      )
                     }
                   >
                     Remove
@@ -156,6 +185,7 @@ function Cart() {
       {cartItems.length > 0 && (
         <>
           <h5>Total: ₹{total}</h5>
+
           <Button onClick={handleCheckout}>
             Checkout / Print Invoice
           </Button>

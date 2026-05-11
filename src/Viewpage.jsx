@@ -1,40 +1,28 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useLocation } from "react-router";
 import Table from "react-bootstrap/Table";
 
 function Viewpage() {
-  const [orders, setOrders] = useState([]);
-  const user = JSON.parse(localStorage.getItem("user"));
+  const location = useLocation();
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await axios.get(
-          `http://localhost:3000/api/orders/${user._id}`
-        );
-        setOrders(res.data.data || []);
-      } catch (err) {
-        console.error(err);
-      }
-    };
+  const orders = location.state?.orders || [];
 
-    if (user?._id) fetchOrders();
-  }, [user]);
-
-  const subtotal = orders.reduce((sum, o) => {
-    return sum + (o.itemid?.price || 0) * o.itemcount;
-  }, 0);
+  const subtotal = orders.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
   const tax = subtotal * 0.05;
+
   const total = subtotal + tax;
 
   return (
-    <div style={{ padding: 20, maxWidth: 800, margin: "auto" }}>
+    <div style={{ padding: 20 }}>
       <h2 align="center">Invoice</h2>
 
       <Table bordered hover>
         <thead>
           <tr>
+            <th>#</th>
             <th>Product</th>
             <th>Price</th>
             <th>Qty</th>
@@ -45,19 +33,26 @@ function Viewpage() {
         <tbody>
           {orders.length === 0 ? (
             <tr>
-              <td colSpan="4" align="center">No orders</td>
+              <td colSpan="5" align="center">
+                No Orders
+              </td>
             </tr>
           ) : (
-            orders.map((o, i) => {
-              const totalItem =
-                (o.itemid?.price || 0) * o.itemcount;
+            orders.map((item, index) => {
+              const itemTotal =
+                item.price * item.quantity;
 
               return (
-                <tr key={i}>
-                  <td>{o.itemid?.name}</td>
-                  <td>{o.itemid?.price}</td>
-                  <td>{o.itemcount}</td>
-                  <td>{totalItem}</td>
+                <tr key={item._id}>
+                  <td>{index + 1}</td>
+
+                  <td>{item.name}</td>
+
+                  <td>₹{item.price}</td>
+
+                  <td>{item.quantity}</td>
+
+                  <td>₹{itemTotal}</td>
                 </tr>
               );
             })
@@ -65,11 +60,21 @@ function Viewpage() {
         </tbody>
       </Table>
 
-      <div style={{ textAlign: "right" }}>
-        <p>Subtotal: Rs{subtotal.toFixed(2)}</p>
-        <p>Tax: Rs{tax.toFixed(2)}</p>
-        <h5>Total: Rs{total.toFixed(2)}</h5>
-      </div>
+      {orders.length > 0 && (
+        <div style={{ textAlign: "right" }}>
+          <p>
+            <strong>Subtotal:</strong> ₹
+            {subtotal.toFixed(2)}
+          </p>
+
+          <p>
+            <strong>Tax (5%):</strong> ₹
+            {tax.toFixed(2)}
+          </p>
+
+          <h4>Total: ₹{total.toFixed(2)}</h4>
+        </div>
+      )}
     </div>
   );
 }
